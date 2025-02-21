@@ -1,98 +1,105 @@
 package com.example.calculadorafernando
 
+import android.os.Build
 import android.os.Bundle
 import android.widget.Button
-import android.widget.TextView
+import android.widget.EditText
 import androidx.appcompat.app.AppCompatActivity
 import org.mariuszgromada.math.mxparser.Expression
 import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
-    private lateinit var textResult: TextView
+    private lateinit var editResult: EditText
     private var expression = StringBuilder()
-    private var isInverseMode = false  // Variable para rastrear el estado de las funciones inversas
+    private var isInverseMode = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         window.statusBarColor = android.graphics.Color.parseColor("#3B3936")
 
-        textResult = findViewById(R.id.textResult)
-        textResult.isSaveEnabled = false
+        editResult = findViewById(R.id.textResult)
+        editResult.isSaveEnabled = false
+
+        // Deshabilita la aparición del teclado al obtener el foco.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            editResult.setShowSoftInputOnFocus(false)
+        } else {
+            // Para versiones anteriores, se puede usar este método.
+            editResult.setInputType(android.text.InputType.TYPE_NULL)
+        }
 
         savedInstanceState?.getString("expression")?.let {
             expression = StringBuilder(it)
-            textResult.text = expression.toString()
+            editResult.setText(expression.toString())
         }
 
-// ids
-val buttons = listOf(
+        // Lista de botones que insertan caracteres en el EditText
+        val buttons = listOf(
             R.id.button2, R.id.button3, R.id.button4, R.id.button5, R.id.button6,
             R.id.button7, R.id.button8, R.id.button9, R.id.button10, R.id.button11,
-            R.id.button12, R.id.button13, R.id.button14, R.id.button15, R.id.button18,
-            R.id.button19, R.id.button20, R.id.button21, R.id.button23,
-            R.id.button24, R.id.button25, R.id.button26, R.id.button27, R.id.button28,
-            R.id.button29, R.id.button30, R.id.button31, R.id.button32, R.id.button33,
-            R.id.button34, R.id.button35
+            R.id.button12, R.id.button13, R.id.button14, R.id.button15, R.id.button18
         )
 
         buttons.forEach { id ->
             findViewById<Button?>(id)?.setOnClickListener { view ->
                 val btnText = (view as Button).text.toString()
-
-                when {
-                    btnText in listOf("sin", "cos", "tan", "asin", "acos", "atan",
-                        "log", "In", "√", "10^x", "e^x") -> {
-                        val functionText = when (btnText) {
-                            "In" -> "ln("
-                            "log" -> "log10("
-                            "√" -> "sqrt("
-                            "10^x" -> "10^("
-                            "e^x" -> "e^("
-                            else -> "$btnText("
-                        }
-                        expression.append(functionText)
-                    }
-                    btnText == "^2" -> {
-                        expression.append("^2")
-                    }
-                    else -> {
-                        expression.append(btnText)
-                    }
-                }
-                textResult.text = expression.toString()
+                insertAtCursor(btnText)
             }
         }
 
+        // Botón AC: limpia la expresión
         findViewById<Button>(R.id.button)?.setOnClickListener {
             expression.clear()
-            textResult.text = ""
+            editResult.setText("")
         }
 
+        // Botón ⌫: elimina el carácter anterior a la posición del cursor
         findViewById<Button>(R.id.button17)?.setOnClickListener {
-            if (expression.isNotEmpty()) {
-                expression.deleteCharAt(expression.length - 1)
-                textResult.text = expression.toString()
-            }
+            deleteAtCursor()
         }
 
+        // Botón "=": evalúa la expresión
         findViewById<Button>(R.id.btnResult)?.setOnClickListener {
-            var processedExpression = expression.toString()
-            processedExpression = processedExpression.replace("\\^2".toRegex(), "^2")
-
-            val balancedExpression = balanceParentheses(processedExpression)
+            val balancedExpression = balanceParentheses(expression.toString())
             val resultado = calcularExpresion(balancedExpression)
 
-            textResult.text = resultado
+            editResult.setText(resultado)
             expression.clear()
             expression.append(resultado)
         }
 
+        // Botón "inv": alterna funciones inversas
         findViewById<Button>(R.id.btnInv)?.setOnClickListener {
             toggleInverseFunctions()
         }
     }
 
+    /**
+     * Inserta el texto recibido en la posición actual del cursor.
+     */
+    private fun insertAtCursor(text: String) {
+        val cursorPosition = editResult.selectionStart.takeIf { it >= 0 } ?: expression.length
+        expression.insert(cursorPosition, text)
+        editResult.setText(expression.toString())
+        editResult.setSelection(cursorPosition + text.length)
+    }
+
+    /**
+     * Elimina el carácter anterior a la posición del cursor.
+     */
+    private fun deleteAtCursor() {
+        val cursorPosition = editResult.selectionStart
+        if (cursorPosition > 0) {
+            expression.deleteCharAt(cursorPosition - 1)
+            editResult.setText(expression.toString())
+            editResult.setSelection(cursorPosition - 1)
+        }
+    }
+
+    /**
+     * Alterna entre funciones normales e inversas.
+     */
     private fun toggleInverseFunctions() {
         val btnInv = findViewById<Button>(R.id.btnInv)
         val sinButton = findViewById<Button>(R.id.button24)
@@ -104,11 +111,10 @@ val buttons = listOf(
 
         isInverseMode = !isInverseMode
 
-        if (isInverseMode) {
-            btnInv.backgroundTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#BD2A2E"))
-        } else {
-            btnInv.backgroundTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#486966"))
-        }
+        btnInv.backgroundTintList = android.content.res.ColorStateList.valueOf(
+            if (isInverseMode) android.graphics.Color.parseColor("#BD2A2E")
+            else android.graphics.Color.parseColor("#486966")
+        )
 
         if (isInverseMode) {
             sinButton?.text = "asin"
@@ -127,11 +133,13 @@ val buttons = listOf(
         }
     }
 
+    /**
+     * Evalúa la expresión matemática y retorna el resultado.
+     */
     private fun calcularExpresion(expresionStr: String): String {
         return try {
             val expr = Expression(expresionStr)
             val result = expr.calculate()
-
             if (result.isNaN() || result.isInfinite()) "Error"
             else String.format(Locale.US, "%.6f", result)
                 .trimEnd('0')
@@ -141,6 +149,9 @@ val buttons = listOf(
         }
     }
 
+    /**
+     * Equilibra los paréntesis de la expresión antes de evaluarla.
+     */
     private fun balanceParentheses(expresionStr: String): String {
         val openCount = expresionStr.count { it == '(' }
         val closeCount = expresionStr.count { it == ')' }
