@@ -15,7 +15,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        window.statusBarColor = android.graphics.Color.parseColor("#27332F")
+        window.statusBarColor = android.graphics.Color.parseColor("#3B3936")
 
         textResult = findViewById(R.id.textResult)
         textResult.isSaveEnabled = false
@@ -78,7 +78,7 @@ val buttons = listOf(
 
         findViewById<Button>(R.id.btnResult)?.setOnClickListener {
             var processedExpression = expression.toString()
-            processedExpression = processedExpression.replace("^2".toRegex(), "^2")
+            processedExpression = processedExpression.replace("\\^2".toRegex(), "^2")
 
             val balancedExpression = balanceParentheses(processedExpression)
             val resultado = calcularExpresion(balancedExpression)
@@ -88,13 +88,13 @@ val buttons = listOf(
             expression.append(resultado)
         }
 
-        // Botón "inv" para cambiar a las funciones inversas
         findViewById<Button>(R.id.btnInv)?.setOnClickListener {
             toggleInverseFunctions()
         }
     }
 
     private fun toggleInverseFunctions() {
+        val btnInv = findViewById<Button>(R.id.btnInv)
         val sinButton = findViewById<Button>(R.id.button24)
         val cosButton = findViewById<Button>(R.id.button25)
         val tanButton = findViewById<Button>(R.id.button26)
@@ -103,6 +103,12 @@ val buttons = listOf(
         val lnButton = findViewById<Button>(R.id.button31)
 
         isInverseMode = !isInverseMode
+
+        if (isInverseMode) {
+            btnInv.backgroundTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#BD2A2E"))
+        } else {
+            btnInv.backgroundTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#486966"))
+        }
 
         if (isInverseMode) {
             sinButton?.text = "asin"
